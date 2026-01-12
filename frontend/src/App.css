@@ -1,0 +1,418 @@
+:root {
+    --bg-app: #1e1e1e;
+    --bg-card: #2d2d2d;
+    --text-main: #ffffff;
+    --text-dim: #a0a0a0;
+
+    --primary: #3b82f6;
+    --primary-hover: #2563eb;
+    --accent-record: #f59e0b;
+    --accent-delete: #ef4444;
+
+    --border-radius: 8px;
+    --transition: all 0.2s ease;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background-color: var(--bg-app);
+    color: var(--text-main);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+}
+
+#root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.container {
+    max-width: 800px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 40px 20px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 20px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+h1 {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: -0.5px;
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: var(--border-radius);
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-color: var(--primary-hover);
+}
+
+.btn-start {
+    background-color: #10b981;
+    color: white;
+    min-width: 100px;
+}
+
+.btn-start:hover:not(:disabled) {
+    background-color: #059669;
+}
+
+.btn-stop {
+    background-color: var(--accent-delete);
+    color: white;
+    min-width: 100px;
+}
+
+.btn-stop:hover {
+    background-color: #dc2626;
+}
+
+.btn-record {
+    background-color: #3e3e3e;
+    color: var(--text-main);
+    border: 1px solid #555;
+    min-width: 110px;
+}
+
+.btn-record:hover:not(:disabled) {
+    background-color: #4e4e4e;
+    border-color: #777;
+}
+
+.btn-record.recording {
+    background-color: var(--accent-record);
+    color: black;
+    border-color: var(--accent-record);
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+
+.points-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.point-card {
+    background: linear-gradient(135deg, #2d2d2d 0%, #282828 100%);
+    border-radius: var(--border-radius);
+    padding: 24px;
+    padding-right: 50px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
+    border: 1px solid transparent;
+    border-left: 3px solid var(--primary);
+    transition: var(--transition);
+    position: relative;
+}
+
+.point-card:hover {
+    border-color: #444;
+    border-left-color: var(--primary);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4), 0 3px 6px rgba(0, 0, 0, 0.25);
+}
+
+.point-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+}
+
+.point-id {
+    font-family: monospace;
+    color: var(--primary);
+    font-size: 16px;
+    font-weight: 600;
+    background: rgba(59, 130, 246, 0.1);
+    padding: 6px 12px;
+    border-radius: 6px;
+    border-left: 3px solid var(--primary);
+    min-width: 50px;
+    text-align: center;
+}
+
+.point-coords {
+    font-family: monospace;
+    font-size: 15px;
+    color: #818cf8;
+}
+
+.point-coords span {
+    margin-right: 15px;
+}
+
+.point-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.input-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid #444;
+}
+
+.input-group label {
+    font-size: 12px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.input-group input {
+    background: transparent;
+    border: none;
+    color: white;
+    width: 70px;
+    font-family: monospace;
+    font-size: 14px;
+    text-align: right;
+    outline: none;
+}
+
+.input-group input[type="number"]::-webkit-inner-spin-button,
+.input-group input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.input-group input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.point-info .input-group {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.point-info .input-group input {
+    font-size: 13px;
+}
+
+
+.delay-control {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.time-input {
+    min-width: unset;
+}
+
+.time-input .input-group {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid #555;
+    min-width: 45px;
+}
+
+.time-input input {
+    width: 40px;
+    text-align: center;
+}
+
+.time-separator {
+    color: var(--text-dim);
+    font-size: 16px;
+    font-weight: bold;
+    user-select: none;
+}
+
+.btn-icon-delete {
+    background: transparent;
+    border: 1px solid transparent;
+    color: #666;
+    font-size: 20px;
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s ease;
+    position: absolute;
+    top: 12px;
+    right: 12px;
+}
+
+.btn-icon-delete:hover {
+    background-color: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: var(--accent-delete);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px;
+    border: 2px dashed #444;
+    border-radius: var(--border-radius);
+    color: var(--text-dim);
+}
+
+.empty-state p {
+    margin: 0 0 5px 0;
+    font-size: 18px;
+}
+
+.countdown-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(99, 102, 241, 0.15) 100%);
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    transition: var(--transition);
+}
+
+.countdown-display.low-time {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
+    border-color: rgba(239, 68, 68, 0.4);
+    animation: countdown-pulse 1s infinite;
+}
+
+.countdown-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.countdown-time {
+    font-family: 'Courier New', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: #60a5fa;
+    letter-spacing: 1px;
+}
+
+.countdown-display.low-time .countdown-time {
+    color: #f87171;
+}
+
+@keyframes countdown-pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+    }
+}
+
+.hotkey-hint {
+    font-size: 12px;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+kbd {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-family: monospace;
+    font-size: 11px;
+    color: var(--text-main);
+    box-shadow: 0 2px 0 rgba(0,0,0,0.5);
+}
+
+@media (max-width: 768px) {
+    .point-card {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 20px;
+    }
+
+    .point-info {
+        width: 100%;
+        gap: 16px;
+    }
+
+    .point-actions {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .point-id {
+        font-size: 15px;
+        padding: 5px 10px;
+    }
+
+    .btn-record {
+        min-width: auto;
+        flex: 1;
+    }
+
+    .delay-control {
+        flex: 1;
+    }
+
+    .countdown-display {
+        flex: 1;
+        justify-content: center;
+    }
+}
