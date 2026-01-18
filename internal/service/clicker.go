@@ -65,7 +65,7 @@ func (c *ClickerService) clickWorker(action domain.ClickAction) {
 		case <-c.stopChan:
 			return
 		case <-ticker.C:
-			robotgo.Move(action.X, action.Y, action.Delay)
+			robotgo.Move(action.X, action.Y)
 			robotgo.Click("left")
 		}
 	}
