@@ -15,6 +15,7 @@ type ClickerService struct {
 	stopChan       chan struct{}
 	wg             sync.WaitGroup
 	mu             sync.Mutex
+	mouseMu        sync.Mutex
 	actions        []domain.ClickAction
 	hotkeyEnabled  bool
 	onStopCallback func()
@@ -110,8 +111,7 @@ func (c *ClickerService) parallelWorker(action domain.ClickAction) {
 		case <-c.stopChan:
 			return
 		case <-ticker.C:
-			robotgo.Move(action.X, action.Y)
-			robotgo.Click("left")
+			c.performClick(action)
 		}
 	}
 }
@@ -181,4 +181,11 @@ func (c *ClickerService) StopGlobalHotkey() {
 		return
 	}
 	c.mu.Unlock()
+}
+
+func (c *ClickerService) performClick(action domain.ClickAction) {
+	c.mouseMu.Lock()
+	defer c.mouseMu.Unlock()
+	robotgo.Move(action.X, action.Y)
+	robotgo.Click("left")
 }
