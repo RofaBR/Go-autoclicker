@@ -1,6 +1,6 @@
-import {useState, useEffect} from 'react';
+import {useState, useEffect, useRef} from 'react';
 import './App.css';
-import {AddPoint, GetPoints, RecordCoordinates, UpdatePointDelay, RemovePoint, StartClicker, StopClicker} from "../wailsjs/go/main/App";
+import {AddPoint, GetPoints, RecordCoordinates, UpdatePointDelay, RemovePoint, StartClicker, StopClicker, SetClickerMode} from "../wailsjs/go/main/App";
 import { DelayControl } from './components/DelayControl';
 import { CountdownDisplay } from './components/CountdownDisplay';
 import { EventsOn } from '../wailsjs/runtime/runtime';
@@ -17,11 +17,13 @@ function App() {
     const [isRecording, setIsRecording] = useState<number | null>(null);
     const [isRunning, setIsRunning] = useState<boolean>(false);
     const [countdowns, setCountdowns] = useState<Record<number, number>>({});
+    const [isSequential, setIsSequential] = useState<boolean>(false);
+    const [currentPointIndex, setCurrentPointIndex] = useState<number>(0);
+    const sequentialIndexRef = useRef<number>(0);
+    const sequentialCountdownRef = useRef<number>(0);
 
     useEffect(() => {
         loadPoints();
-
-        // Listen for clicker stopped event (e.g., from F10 hotkey)
         const unsubscribe = EventsOn('clicker:stopped', () => {
             setIsRunning(false);
         });
@@ -32,33 +34,58 @@ function App() {
     }, []);
 
     useEffect(() => {
-        if (isRunning) {
-            const initialCountdowns: Record<number, number> = {};
-            points.forEach(point => {
-                initialCountdowns[point.ID] = point.Delay;
-            });
-            setCountdowns(initialCountdowns);
+        if (isRunning && points.length > 0) {
+            if (isSequential) {
+                sequentialIndexRef.current = 0;
+                sequentialCountdownRef.current = points[0].Delay;
+                setCurrentPointIndex(0);
+                setCountdowns({ [points[0].ID]: points[0].Delay });
 
-            const interval = setInterval(() => {
-                setCountdowns(prevCountdowns => {
-                    const newCountdowns = { ...prevCountdowns };
-                    points.forEach(point => {
-                        if (newCountdowns[point.ID] !== undefined) {
-                            newCountdowns[point.ID] -= 100;
-                            if (newCountdowns[point.ID] <= 0) {
-                                newCountdowns[point.ID] = point.Delay;
-                            }
-                        }
-                    });
-                    return newCountdowns;
+                const interval = setInterval(() => {
+                    sequentialCountdownRef.current -= 100;
+
+                    if (sequentialCountdownRef.current <= 0) {
+                        sequentialIndexRef.current = (sequentialIndexRef.current + 1) % points.length;
+                        const nextPoint = points[sequentialIndexRef.current];
+                        sequentialCountdownRef.current = nextPoint.Delay;
+                        setCurrentPointIndex(sequentialIndexRef.current);
+                        setCountdowns({ [nextPoint.ID]: nextPoint.Delay });
+                    } else {
+                        const currentPoint = points[sequentialIndexRef.current];
+                        setCountdowns({ [currentPoint.ID]: sequentialCountdownRef.current });
+                    }
+                }, 100);
+
+                return () => clearInterval(interval);
+            } else {
+                const initialCountdowns: Record<number, number> = {};
+                points.forEach(point => {
+                    initialCountdowns[point.ID] = point.Delay;
                 });
-            }, 100);
+                setCountdowns(initialCountdowns);
 
-            return () => clearInterval(interval);
+                const interval = setInterval(() => {
+                    setCountdowns(prevCountdowns => {
+                        const newCountdowns = { ...prevCountdowns };
+                        points.forEach(point => {
+                            if (newCountdowns[point.ID] !== undefined) {
+                                newCountdowns[point.ID] -= 100;
+                                if (newCountdowns[point.ID] <= 0) {
+                                    newCountdowns[point.ID] = point.Delay;
+                                }
+                            }
+                        });
+                        return newCountdowns;
+                    });
+                }, 100);
+
+                return () => clearInterval(interval);
+            }
         } else {
             setCountdowns({});
+            setCurrentPointIndex(0);
         }
-    }, [isRunning, points]);
+    }, [isRunning, points, isSequential]);
 
     const loadPoints = async () => {
         try {
@@ -108,6 +135,15 @@ function App() {
         }
     };
 
+    const handleModeChange = async (sequential: boolean) => {
+        try {
+            await SetClickerMode(sequential);
+            setIsSequential(sequential);
+        } catch (error) {
+            console.error("Failed to set mode:", error);
+        }
+    };
+
     const handleStart = async () => {
         try {
             await StartClicker();
@@ -135,6 +171,22 @@ function App() {
                     <kbd>F10</kbd>
                 </div>
                 <div className="header-actions">
+                    <div className="mode-switcher">
+                        <button
+                            className={`mode-btn ${!isSequential ? 'active' : ''}`}
+                            onClick={() => handleModeChange(false)}
+                            disabled={isRunning}
+                        >
+                            Parallel
+                        </button>
+                        <button
+                            className={`mode-btn ${isSequential ? 'active' : ''}`}
+                            onClick={() => handleModeChange(true)}
+                            disabled={isRunning}
+                        >
+                            Sequential
+                        </button>
+                    </div>
                     <button className="btn btn-primary" onClick={handleAddPoint}>
                         + Add Point
                     </button>
@@ -161,8 +213,8 @@ function App() {
                         <small>Click the button above to start.</small>
                     </div>
                 ) : (
-                    points.map((point) => (
-                        <div key={point.ID} className="point-card">
+                    points.map((point, index) => (
+                        <div key={point.ID} className={`point-card ${isRunning && isSequential && index === currentPointIndex ? 'active' : ''}`}>
 
                             <div className="point-info">
                                 <span className="point-id">#{point.ID}</span>
