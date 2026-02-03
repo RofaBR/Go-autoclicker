@@ -119,6 +119,10 @@ func (a *App) RecordCoordinates(id int) bool {
 	return a.UpdatePointCoordinates(id, x, y)
 }
 
+func (a *App) SetClickerMode(isSequential bool) {
+	a.clicker.SetMode(isSequential)
+}
+
 func (a *App) StartClicker() {
 	a.mu.Lock()
 	currentPoints := make([]domain.ClickAction, len(a.points))

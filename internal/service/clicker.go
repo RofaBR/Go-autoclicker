@@ -18,14 +18,23 @@ type ClickerService struct {
 	actions        []domain.ClickAction
 	hotkeyEnabled  bool
 	onStopCallback func()
+
+	IsSequential bool
 }
 
 func NewClickerService() *ClickerService {
 	return &ClickerService{
-		isRunning: false,
-		stopChan:  make(chan struct{}),
-		actions:   make([]domain.ClickAction, 0),
+		isRunning:    false,
+		stopChan:     make(chan struct{}),
+		actions:      make([]domain.ClickAction, 0),
+		IsSequential: false,
 	}
+}
+
+func (c *ClickerService) SetMode(sequential bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.IsSequential = sequential
 }
 
 func (c *ClickerService) Start() {
@@ -39,18 +48,54 @@ func (c *ClickerService) Start() {
 	c.isRunning = true
 	c.stopChan = make(chan struct{})
 
-	for _, action := range c.actions {
+	if c.IsSequential {
 		c.wg.Add(1)
-		go c.clickWorker(action)
+		go c.sequentialWorker()
+	} else {
+		for _, action := range c.actions {
+			c.wg.Add(1)
+			go c.parallelWorker(action)
+		}
 	}
-
 	go func() {
 		c.wg.Wait()
 		c.setStopped()
 	}()
 }
 
-func (c *ClickerService) clickWorker(action domain.ClickAction) {
+func (c *ClickerService) sequentialWorker() {
+	defer c.wg.Done()
+
+	actions := c.actions
+	if len(actions) == 0 {
+		return
+	}
+	currentIndex := 0
+
+	for {
+		action := actions[currentIndex]
+
+		delay := action.Delay
+		if delay <= 0 {
+			delay = 100
+		}
+		timer := time.NewTimer(time.Duration(delay) * time.Millisecond)
+		select {
+		case <-c.stopChan:
+			timer.Stop()
+			return
+		case <-timer.C:
+			robotgo.Move(action.X, action.Y)
+			robotgo.Click("left")
+		}
+		currentIndex++
+		if currentIndex >= len(actions) {
+			currentIndex = 0
+		}
+	}
+}
+
+func (c *ClickerService) parallelWorker(action domain.ClickAction) {
 	defer c.wg.Done()
 
 	delay := action.Delay
