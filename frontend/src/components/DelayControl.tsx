@@ -6,78 +6,65 @@ interface DelayControlProps {
     onChange: (delayMs: number) => void;
 }
 
+interface TimeParts {
+    h: number;
+    m: number;
+    s: number;
+    ms: number;
+}
+
 export const DelayControl = ({ delayMs, onChange }: DelayControlProps) => {
-    const [hours, setHours] = useState<number>(0);
-    const [minutes, setMinutes] = useState<number>(0);
-    const [seconds, setSeconds] = useState<number>(0);
+    const [parts, setParts] = useState<TimeParts>({ h: 0, m: 0, s: 0, ms: 0 });
 
     useEffect(() => {
-        const totalSeconds = Math.floor(delayMs / 1000);
-        const h = Math.floor(totalSeconds / 3600);
-        const m = Math.floor((totalSeconds % 3600) / 60);
-        const s = totalSeconds % 60;
+        const h = Math.floor(delayMs / 3600000);
+        const m = Math.floor((delayMs % 3600000) / 60000);
+        const s = Math.floor((delayMs % 60000) / 1000);
+        const ms = delayMs % 1000;
 
-        setHours(h);
-        setMinutes(m);
-        setSeconds(s);
+        setParts({ h, m, s, ms });
     }, [delayMs]);
 
-    const handleChange = (h: number, m: number, s: number) => {
-        const newDelayMs = timeToMs(h, m, s);
-        onChange(newDelayMs);
-    };
+    const timeFields: { label: string; key: keyof TimeParts; max?: number }[] = [
+        { label: 'H', key: 'h' },
+        { label: 'M', key: 'm', max: 59 },
+        { label: 'S', key: 's', max: 59 },
+        { label: 'MS', key: 'ms', max: 999 }
+    ];
 
-    const handleHoursChange = (value: string) => {
-        const h = Math.max(0, parseInt(value) || 0);
-        setHours(h);
-        handleChange(h, minutes, seconds);
-    };
+    const handleFieldChange = (key: keyof TimeParts, valueStr: string, max?: number) => {
+        let value = parseInt(valueStr) || 0;
 
-    const handleMinutesChange = (value: string) => {
-        const m = Math.max(0, Math.min(59, parseInt(value) || 0));
-        setMinutes(m);
-        handleChange(hours, m, seconds);
-    };
+        if (value < 0) value = 0;
+        if (max !== undefined && value > max) value = max;
 
-    const handleSecondsChange = (value: string) => {
-        const s = Math.max(0, Math.min(59, parseInt(value) || 0));
-        setSeconds(s);
-        handleChange(hours, minutes, s);
+        const newParts = { ...parts, [key]: value };
+
+        setParts(newParts);
+
+        const totalMs = timeToMs(newParts.h, newParts.m, newParts.s, newParts.ms);
+        onChange(totalMs);
     };
 
     return (
         <div className="delay-control">
-            <div className="input-group time-input">
-                <label>H</label>
-                <input
-                    type="number"
-                    value={hours}
-                    onChange={(e) => handleHoursChange(e.target.value)}
-                    min="0"
-                />
-            </div>
-            <span className="time-separator">:</span>
-            <div className="input-group time-input">
-                <label>M</label>
-                <input
-                    type="number"
-                    value={minutes}
-                    onChange={(e) => handleMinutesChange(e.target.value)}
-                    min="0"
-                    max="59"
-                />
-            </div>
-            <span className="time-separator">:</span>
-            <div className="input-group time-input">
-                <label>S</label>
-                <input
-                    type="number"
-                    value={seconds}
-                    onChange={(e) => handleSecondsChange(e.target.value)}
-                    min="0"
-                    max="59"
-                />
-            </div>
+            {timeFields.map((field, index) => (
+                <div key={field.key} style={{ display: 'flex', alignItems: 'center' }}>
+                    <div className="input-group time-input">
+                        <label>{field.label}</label>
+                        <input
+                            type="number"
+                            value={parts[field.key]}
+                            onChange={(e) => handleFieldChange(field.key, e.target.value, field.max)}
+                            min="0"
+                            max={field.max}
+                        />
+                    </div>
+                    {index < timeFields.length - 1 && (
+                        <span className="time-separator">:</span>
+                    )}
+                </div>
+            ))}
         </div>
     );
 };
