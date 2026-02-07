@@ -5,20 +5,20 @@ import (
 	"time"
 
 	"myproject/internal/domain"
-	"myproject/internal/input"
 
 	"github.com/go-vgo/robotgo"
 )
 
 type ClickerService struct {
-	isRunning      bool
-	stopChan       chan struct{}
-	wg             sync.WaitGroup
-	mu             sync.Mutex
-	mouseMu        sync.Mutex
-	actions        []domain.ClickAction
-	hotkeyEnabled  bool
-	onStopCallback func()
+	isRunning            bool
+	stopChan             chan struct{}
+	wg                   sync.WaitGroup
+	mu                   sync.Mutex
+	mouseMu              sync.Mutex
+	actions              []domain.ClickAction
+	hotkeyEnabled        bool
+	onStopCallback       func()
+	onVisibilityCallback func()
 
 	IsSequential bool
 }
@@ -156,31 +156,10 @@ func (c *ClickerService) SetStopCallback(callback func()) {
 	c.onStopCallback = callback
 }
 
-func (c *ClickerService) StartGlobalHotkey() {
+func (c *ClickerService) SetVisibilityCallback(callback func()) {
 	c.mu.Lock()
-	if c.hotkeyEnabled {
-		c.mu.Unlock()
-		return
-	}
-	c.hotkeyEnabled = true
-	c.mu.Unlock()
-
-	input.GetHookManager().EnableHotkey(func() {
-		if c.IsRunning() {
-			c.Stop()
-		}
-	})
-}
-
-func (c *ClickerService) StopGlobalHotkey() {
-	c.mu.Lock()
-	if c.hotkeyEnabled {
-		c.hotkeyEnabled = false
-		c.mu.Unlock()
-		input.GetHookManager().DisableHotkey()
-		return
-	}
-	c.mu.Unlock()
+	defer c.mu.Unlock()
+	c.onVisibilityCallback = callback
 }
 
 func (c *ClickerService) performClick(action domain.ClickAction) {

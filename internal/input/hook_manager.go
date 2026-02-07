@@ -8,12 +8,16 @@ import (
 )
 
 type HookManager struct {
-	mu             sync.Mutex
-	started        bool
-	recording      bool
-	recordChan     chan Coordinates
-	hotkeyEnabled  bool
-	hotkeyCallback func()
+	mu         sync.Mutex
+	started    bool
+	recording  bool
+	recordChan chan Coordinates
+	hotkeys    map[uint16]*hotkeyEntry
+}
+
+type hotkeyEntry struct {
+	enabled  bool
+	callback func()
 }
 
 var (
@@ -23,7 +27,9 @@ var (
 
 func GetHookManager() *HookManager {
 	once.Do(func() {
-		instance = &HookManager{}
+		instance = &HookManager{
+			hotkeys: make(map[uint16]*hotkeyEntry),
+		}
 	})
 	return instance
 }
@@ -41,35 +47,39 @@ func (h *HookManager) Start() {
 }
 
 func (h *HookManager) runEventLoop() {
-	hook.Register(hook.KeyDown, []string{"f10"}, func(e hook.Event) {
-		h.mu.Lock()
-		enabled := h.hotkeyEnabled
-		callback := h.hotkeyCallback
-		h.mu.Unlock()
+	evChan := hook.Start()
+	defer hook.End()
 
-		if enabled && callback != nil {
-			callback()
-		}
-	})
-
-	hook.Register(hook.MouseDown, []string{}, func(e hook.Event) {
-		h.mu.Lock()
-		if h.recording && e.Button == hook.MouseMap["left"] {
-			x, y := robotgo.Location()
-			ch := h.recordChan
-			h.recording = false
+	for e := range evChan {
+		if e.Kind == hook.KeyDown {
+			h.mu.Lock()
+			entry, found := h.hotkeys[e.Keycode]
+			var action func()
+			if found && entry.enabled {
+				action = entry.callback
+			}
 			h.mu.Unlock()
 
-			if ch != nil {
-				ch <- Coordinates{X: x, Y: y}
+			if action != nil {
+				go action()
 			}
-			return
 		}
-		h.mu.Unlock()
-	})
+		if e.Kind == hook.MouseDown {
+			h.mu.Lock()
+			if h.recording && e.Button == hook.MouseMap["left"] {
+				x, y := robotgo.Location()
+				ch := h.recordChan
+				h.recording = false
+				h.mu.Unlock()
 
-	s := hook.Start()
-	<-hook.Process(s)
+				if ch != nil {
+					ch <- Coordinates{X: x, Y: y}
+				}
+				continue
+			}
+			h.mu.Unlock()
+		}
+	}
 }
 
 func (h *HookManager) StartRecording() (int, int) {
@@ -87,17 +97,48 @@ func (h *HookManager) StartRecording() (int, int) {
 	return result.X, result.Y
 }
 
-func (h *HookManager) EnableHotkey(callback func()) {
+func (h *HookManager) RegisterHotkey(key string, callback func()) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	h.hotkeyCallback = callback
-	h.hotkeyEnabled = true
+	kc := hook.Keycode[key]
+	h.hotkeys[kc] = &hotkeyEntry{
+		enabled:  false,
+		callback: callback,
+	}
 }
 
-func (h *HookManager) DisableHotkey() {
+func (h *HookManager) EnableHotkey(key string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	h.hotkeyEnabled = false
+	kc := hook.Keycode[key]
+	if _, ok := h.hotkeys[kc]; ok {
+		h.hotkeys[kc].enabled = true
+	}
+}
+func (h *HookManager) EnableHotkeys() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for _, entry := range h.hotkeys {
+		entry.enabled = true
+	}
+}
+
+func (h *HookManager) DisableHotkey(key string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	kc := hook.Keycode[key]
+	if _, ok := h.hotkeys[kc]; ok {
+		h.hotkeys[kc].enabled = false
+	}
+}
+
+func (h *HookManager) DisableHotkeys() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	for _, entry := range h.hotkeys {
+		entry.enabled = false
+	}
 }
 
 func (h *HookManager) IsRecording() bool {

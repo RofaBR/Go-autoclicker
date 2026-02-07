@@ -11,12 +11,13 @@ import (
 )
 
 type App struct {
-	ctx      context.Context
-	points   []domain.ClickAction
-	nextID   int
-	mu       sync.Mutex
-	recorder *input.RecorderService
-	clicker  *service.ClickerService
+	ctx          context.Context
+	points       []domain.ClickAction
+	nextID       int
+	mu           sync.Mutex
+	recorder     *input.RecorderService
+	clicker      *service.ClickerService
+	windowHidden bool
 }
 
 func NewApp() *App {
@@ -32,9 +33,22 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 
 	input.GetHookManager().Start()
+	a.clicker.RegisterHotkeys()
+	a.clicker.EnableVisibilityHotkey()
 
 	a.clicker.SetStopCallback(func() {
 		runtime.EventsEmit(a.ctx, "clicker:stopped")
+	})
+	a.clicker.SetVisibilityCallback(func() {
+		a.mu.Lock()
+		defer a.mu.Unlock()
+		if a.windowHidden {
+			runtime.WindowShow(a.ctx)
+			a.windowHidden = false
+		} else {
+			runtime.WindowHide(a.ctx)
+			a.windowHidden = true
+		}
 	})
 }
 
@@ -113,8 +127,6 @@ func (a *App) RemovePoint(id int) bool {
 }
 
 func (a *App) RecordCoordinates(id int) bool {
-	//runtime.WindowHide(a.ctx)
-	//runtime.WindowShow(a.ctx)
 	x, y := a.recorder.StartRecording()
 	return a.UpdatePointCoordinates(id, x, y)
 }
